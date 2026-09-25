@@ -1,5 +1,7 @@
 package hospitalManagement.model;
 
+import hospitalManagement.enums.Gender;
+
 public class Patient extends Person{
 	
 	private String disease;

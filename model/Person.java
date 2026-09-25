@@ -1,5 +1,7 @@
 package hospitalManagement.model;
 
+import hospitalManagement.enums.Gender;
+
 public abstract class Person {
 	private int id;
 	private String name;
