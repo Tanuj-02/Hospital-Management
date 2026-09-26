@@ -11,6 +11,14 @@ public class Patient extends Person{
 		this.disease = diesease;
 	}
 
+	public String getDisease() {
+		return disease;
+	}
+
+	public void setDisease(String disease) {
+		this.disease = disease;
+	}
+
 	@Override
 	public void displayDetails() {
 		System.out.println("Patient Id: " + getId());
