@@ -68,5 +68,20 @@ throws PaymentException{
     "Payment successful");
 
 }
+public void showBillsByPatient(int patientId) {
 
+    boolean found = false;
+
+    for (Bill bill : bills) {
+
+        if (bill.getPatient().getId() == patientId) {
+            bill.displayBill();
+            found = true;
+        }
+    }
+
+    if (!found) {
+        System.out.println("No bills found for this patient.");
+    }
+}
 }

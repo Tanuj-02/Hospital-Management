@@ -114,7 +114,8 @@ public class Hospital {
         System.out.println("1. Generate Bill");
         System.out.println("2. Pay Bill");
         System.out.println("3. View All Bills");
-        System.out.println("4. Back");
+        System.out.println("4. View Patient Bills");
+        System.out.println("5. Back");
         System.out.print("Enter your choice: ");
 
         choice = readInt();
@@ -132,8 +133,10 @@ public class Hospital {
             case 3:
                 billingService.showAllBills();
                 break;
-
             case 4:
+                showPatientBills();
+                break;
+            case 5:
                 break;
 
             default:
@@ -141,7 +144,16 @@ public class Hospital {
                 break;
         }
 
-    } while (choice != 4);
+    } while (choice != 5);
+}
+    private static void showPatientBills() {
+
+    System.out.println("\n===== PATIENT BILLS =====");
+
+    System.out.print("Enter Patient ID: ");
+    int patientId = readInt();
+
+    billingService.showBillsByPatient(patientId);
 }
     private static void generateBill() {
 
