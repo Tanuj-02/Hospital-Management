@@ -1,4 +1,4 @@
-package hospitalManagement.services;
+package services;
 
 import java.time.LocalDateTime;
 import java.util.ArrayList;
@@ -6,10 +6,11 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Random;
 
-import hospitalManagement.enums.Status;
-import hospitalManagement.model.Appointment;
-import hospitalManagement.model.Doctor;
-import hospitalManagement.model.Patient;
+import exceptions.InvalidAppointmentException;
+import enums.Status;
+import model.Appointment;
+import model.Doctor;
+import model.Patient;
 
 public class AppointmentService {
 	
@@ -20,8 +21,19 @@ public class AppointmentService {
 	
 	private HashMap<Integer, List<Appointment>> patientAppointments = new HashMap<>();
 	
-	public void createAppointment(Patient patient, LocalDateTime time) {
+	public void createAppointment(Patient patient, LocalDateTime time)
+			throws InvalidAppointmentException {
+		if (patient == null) {
+			throw new InvalidAppointmentException("Patient is required to create an appointment.");
+		}
+		if (time == null || time.isBefore(LocalDateTime.now())) {
+			throw new InvalidAppointmentException("Appointment date and time must be in the future.");
+		}
+
 		String disease = patient.getDisease();
+		if (disease == null || disease.isBlank()) {
+			throw new InvalidAppointmentException("Patient disease is required to find a doctor.");
+		}
 		
 		String specialty = null;
 		
@@ -46,10 +58,17 @@ public class AppointmentService {
 		}
 		
 		List<Doctor> doctors = doctorService.searchDoctor(specialty);
+		if (doctors.isEmpty()) {
+			throw new InvalidAppointmentException(
+					"No doctor is available for the patient's disease: " + disease);
+		}
 		
 		Doctor doctor = doctors.get(0);
 		
-		int id = random.nextInt();
+		int id;
+		do {
+			id = random.nextInt();
+		} while (map.containsKey(id));
 		Appointment appointment = new Appointment(id, patient, doctor, time, Status.SCHEDULED);
 		
 		map.put(id, appointment);
@@ -63,10 +82,12 @@ public class AppointmentService {
 		}
 	}
 	
-	public void updateStatus(int id, Status status) {
+	public void updateStatus(int id, Status status) throws InvalidAppointmentException {
 		if(!map.containsKey(id)) {
-			System.out.println("No appointment present with given id");
-			return;
+			throw new InvalidAppointmentException("No appointment present with ID: " + id);
+		}
+		if (status == null) {
+			throw new InvalidAppointmentException("Appointment status is required.");
 		}
 		Appointment appointment = map.get(id);
 		appointment.setStatus(status);

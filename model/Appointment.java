@@ -1,8 +1,8 @@
-package hospitalManagement.model;
+package model;
 
 import java.time.LocalDateTime;
 
-import hospitalManagement.enums.Status;
+import enums.Status;
 
 public class Appointment {
 	private int id;
