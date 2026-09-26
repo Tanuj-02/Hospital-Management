@@ -1,19 +1,22 @@
-package hospitalManagement;
-
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
 import java.util.List;
 import java.util.Scanner;
 
-import hospitalManagement.enums.Gender;
-import hospitalManagement.enums.Status;
-import hospitalManagement.model.Appointment;
-import hospitalManagement.model.Doctor;
-import hospitalManagement.model.Patient;
-import hospitalManagement.services.AppointmentService;
-import hospitalManagement.services.DoctorService;
-import hospitalManagement.services.PatientService;
+import model.Bill;
+import services.BillingService;
+import exceptions.PaymentException;
+import exceptions.HospitalException;
+import exceptions.InvalidAppointmentException;
+import enums.Gender;
+import enums.Status;
+import model.Appointment;
+import model.Doctor;
+import model.Patient;
+import services.AppointmentService;
+import services.DoctorService;
+import services.PatientService;
 
 public class Hospital {
 
@@ -22,7 +25,7 @@ public class Hospital {
     private static final DoctorService doctorService = new DoctorService();
     private static final PatientService patientService = new PatientService();
     private static final AppointmentService appointmentService = new AppointmentService();
-
+    private static final BillingService billingService = new BillingService();
     private static final DateTimeFormatter formatter =
             DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm");
 
@@ -35,11 +38,11 @@ public class Hospital {
             System.out.println("1. Book Appointment");
             System.out.println("2. Patient Management");
             System.out.println("3. Doctor Management");
-            System.out.println("4. Exit");
+            System.out.println("4. Billing Management");
+            System.out.println("5. Exit");
             System.out.print("Enter your choice: ");
 
-            choice = sc.nextInt();
-            sc.nextLine();
+            choice = readInt();
 
             switch (choice) {
                 case 1:
@@ -52,6 +55,9 @@ public class Hospital {
                     doctorMenu();
                     break;
                 case 4:
+                    billingMenu();
+                    break;
+                case 5:
                     System.out.println("Exiting Hospital Management System.");
                     break;
                 default:
@@ -59,7 +65,7 @@ public class Hospital {
                     break;
             }
 
-        } while (choice != 4);
+        } while (choice != 5);
     }
 
     private static void bookAppointment() {
@@ -75,8 +81,7 @@ public class Hospital {
             System.out.println("5. Back");
             System.out.print("Enter your choice: ");
 
-            choice = sc.nextInt();
-            sc.nextLine();
+            choice = readInt();
 
             switch (choice) {
                 case 1:
@@ -100,19 +105,115 @@ public class Hospital {
 
         } while (choice != 5);
     }
+    private static void billingMenu() {
 
+    int choice;
+
+    do {
+        System.out.println("\n===== BILLING MANAGEMENT =====");
+        System.out.println("1. Generate Bill");
+        System.out.println("2. Pay Bill");
+        System.out.println("3. View All Bills");
+        System.out.println("4. Back");
+        System.out.print("Enter your choice: ");
+
+        choice = readInt();
+
+        switch (choice) {
+
+            case 1:
+                generateBill();
+                break;
+
+            case 2:
+                payBill();
+                break;
+
+            case 3:
+                billingService.showAllBills();
+                break;
+
+            case 4:
+                break;
+
+            default:
+                System.out.println("Invalid choice.");
+                break;
+        }
+
+    } while (choice != 4);
+}
+    private static void generateBill() {
+
+    System.out.println("\n===== GENERATE BILL =====");
+
+    System.out.print("Enter Appointment ID: ");
+    int appointmentId = readInt();
+
+    Appointment appointment =
+            appointmentService.getAppointmentById(appointmentId);
+
+    if (appointment == null) {
+        System.out.println("Appointment not found.");
+        return;
+    }
+
+    if (appointment.getStatus() != Status.COMPLETED) {
+        System.out.println("Bill can only be generated for a completed appointment.");
+        return;
+    }
+
+    System.out.print("Enter consultation fee: ");
+    double fee = sc.nextDouble();
+    sc.nextLine();
+
+    int billId = (int) (System.currentTimeMillis() % 100000);
+
+    Bill bill = new Bill(
+            billId,
+            appointment.getPatient(),
+            appointment.getDoctor(),
+            fee
+    );
+
+    billingService.generateBill(bill);
+    bill.displayBill();
+}
+    private static void payBill() {
+
+    System.out.println("\n===== PAY BILL =====");
+
+    System.out.print("Enter Bill ID: ");
+    int billId = readInt();
+
+    Bill bill = billingService.getBillById(billId);
+
+    if (bill == null) {
+        System.out.println("Bill not found.");
+        return;
+    }
+
+    try {
+
+        billingService.payBill(bill);
+
+    } catch (PaymentException e) {
+
+        System.out.println(e.getMessage());
+
+    }
+}
     private static void createAppointment() {
 
         System.out.println("\n===== CREATE APPOINTMENT =====");
 
         System.out.print("Enter Patient ID: ");
-        int patientId = sc.nextInt();
-        sc.nextLine();
+        int patientId = readInt();
 
         Patient patient = patientService.searchPatient(patientId);
 
         if (patient == null) {
-            System.out.println("Patient not found. Please register the patient first.");
+        System.out.println("Patient not found. Please register the patient first.");
             return;
         }
 
@@ -129,18 +230,12 @@ public class Hospital {
             return;
         }
 
-        if (appointmentTime.isBefore(LocalDateTime.now())) {
-            System.out.println("Appointment date and time cannot be in the past.");
+        try {
+            appointmentService.createAppointment(patient, appointmentTime);
+        } catch (InvalidAppointmentException e) {
+            System.out.println(e.getMessage());
             return;
         }
-
-        if (!isValidDisease(patient.getDisease())) {
-            System.out.println(
-                    "No matching doctor found for the patient's disease.");
-            return;
-        }
-
-        appointmentService.createAppointment(patient, appointmentTime);
 
         System.out.println("Appointment created successfully.");
         System.out.println("Patient: " + patient.getName());
@@ -148,29 +243,12 @@ public class Hospital {
                 + appointmentTime.format(formatter));
     }
 
-    private static boolean isValidDisease(String disease) {
-
-        switch (disease) {
-            case "Joint Pain":
-            case "Fracture":
-            case "Acne":
-            case "Skin Allergy":
-            case "Heart":
-            case "Migraine":
-            case "Inflamation":
-                return true;
-            default:
-                return false;
-        }
-    }
-
     private static void updateAppointmentStatus() {
 
         System.out.println("\n===== UPDATE APPOINTMENT STATUS =====");
 
         System.out.print("Enter Appointment ID: ");
-        int appointmentId = sc.nextInt();
-        sc.nextLine();
+        int appointmentId = readInt();
 
         Appointment appointment =
                 appointmentService.getAppointmentById(appointmentId);
@@ -185,8 +263,7 @@ public class Hospital {
         System.out.println("3. Completed");
         System.out.print("Select new status: ");
 
-        int choice = sc.nextInt();
-        sc.nextLine();
+        int choice = readInt();
 
         Status status;
 
@@ -205,7 +282,12 @@ public class Hospital {
                 return;
         }
 
-        appointmentService.updateStatus(appointmentId, status);
+        try {
+            appointmentService.updateStatus(appointmentId, status);
+        } catch (InvalidAppointmentException e) {
+            System.out.println(e.getMessage());
+            return;
+        }
 
         System.out.println("Appointment status updated successfully.");
     }
@@ -215,8 +297,7 @@ public class Hospital {
         System.out.println("\n===== SEARCH APPOINTMENT =====");
 
         System.out.print("Enter Appointment ID: ");
-        int appointmentId = sc.nextInt();
-        sc.nextLine();
+        int appointmentId = readInt();
 
         Appointment appointment =
                 appointmentService.getAppointmentById(appointmentId);
@@ -234,8 +315,7 @@ public class Hospital {
         System.out.println("\n===== PATIENT APPOINTMENT HISTORY =====");
 
         System.out.print("Enter Patient ID: ");
-        int patientId = sc.nextInt();
-        sc.nextLine();
+        int patientId = readInt();
 
         Patient patient = patientService.searchPatient(patientId);
 
@@ -290,8 +370,7 @@ public class Hospital {
             System.out.println("6. Back");
             System.out.print("Enter your choice: ");
 
-            choice = sc.nextInt();
-            sc.nextLine();
+            choice = readInt();
 
             switch (choice) {
                 case 1:
@@ -324,8 +403,7 @@ public class Hospital {
         System.out.println("\n===== REGISTER PATIENT =====");
 
         System.out.print("Enter Patient ID: ");
-        int id = sc.nextInt();
-        sc.nextLine();
+        int id = readInt();
 
         if (patientService.searchPatient(id) != null) {
             System.out.println("Patient ID already exists.");
@@ -336,8 +414,7 @@ public class Hospital {
         String name = sc.nextLine();
 
         System.out.print("Enter Patient Age: ");
-        int age = sc.nextInt();
-        sc.nextLine();
+        int age = readInt();
 
         Gender gender = selectGender();
 
@@ -354,7 +431,11 @@ public class Hospital {
         Patient patient =
                 new Patient(id, name, age, gender, disease);
 
-        patientService.addPatient(patient);
+        try {
+            patientService.addPatient(patient);
+        } catch (HospitalException e) {
+            System.out.println(e.getMessage());
+        }
     }
 
     private static Gender selectGender() {
@@ -364,8 +445,7 @@ public class Hospital {
         System.out.println("2. Female");
         System.out.print("Enter your choice: ");
 
-        int choice = sc.nextInt();
-        sc.nextLine();
+        int choice = readInt();
 
         switch (choice) {
             case 1:
@@ -390,8 +470,7 @@ public class Hospital {
         System.out.println("7. Inflamation");
         System.out.print("Enter your choice: ");
 
-        int choice = sc.nextInt();
-        sc.nextLine();
+        int choice = readInt();
 
         switch (choice) {
             case 1:
@@ -419,8 +498,7 @@ public class Hospital {
         System.out.println("\n===== SEARCH PATIENT BY ID =====");
 
         System.out.print("Enter Patient ID: ");
-        int id = sc.nextInt();
-        sc.nextLine();
+        int id = readInt();
 
         Patient patient = patientService.searchPatient(id);
 
@@ -458,8 +536,7 @@ public class Hospital {
         System.out.println("\n===== DELETE PATIENT =====");
 
         System.out.print("Enter Patient ID: ");
-        int id = sc.nextInt();
-        sc.nextLine();
+        int id = readInt();
 
         Patient patient = patientService.searchPatient(id);
 
@@ -468,7 +545,11 @@ public class Hospital {
             return;
         }
 
-        patientService.deletePatient(id);
+        try {
+            patientService.deletePatient(id);
+        } catch (HospitalException e) {
+            System.out.println(e.getMessage());
+        }
     }
 
     private static void doctorMenu() {
@@ -483,8 +564,7 @@ public class Hospital {
             System.out.println("4. Back");
             System.out.print("Enter your choice: ");
 
-            choice = sc.nextInt();
-            sc.nextLine();
+            choice = readInt();
 
             switch (choice) {
                 case 1:
@@ -511,8 +591,7 @@ public class Hospital {
         System.out.println("\n===== SEARCH DOCTOR BY ID =====");
 
         System.out.print("Enter Doctor ID: ");
-        int id = sc.nextInt();
-        sc.nextLine();
+        int id = readInt();
 
         Doctor doctor = doctorService.getById(id);
 
@@ -535,8 +614,7 @@ public class Hospital {
         System.out.println("5. Rheumatologist");
         System.out.print("Select specialty: ");
 
-        int choice = sc.nextInt();
-        sc.nextLine();
+        int choice = readInt();
 
         String specialty;
 
@@ -585,6 +663,17 @@ public class Hospital {
             if (doctor != null) {
                 doctor.displayDetails();
                 System.out.println("------------------------------");
+            }
+        }
+    }
+
+    private static int readInt() {
+        while (true) {
+            String input = sc.nextLine().trim();
+            try {
+                return Integer.parseInt(input);
+            } catch (NumberFormatException e) {
+                System.out.print("Please enter a valid whole number: ");
             }
         }
     }
