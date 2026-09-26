@@ -4,11 +4,19 @@ import hospitalManagement.enums.Gender;
 
 public class Doctor extends Person{
 	
-	private String specitality;
+	private String specialty;
 
-	public Doctor(int id, String name, int age, Gender gender, String specitality) {
+	public String getSpecialty() {
+		return specialty;
+	}
+
+	public void setSpecialty(String specialty) {
+		this.specialty = specialty;
+	}
+
+	public Doctor(int id, String name, int age, Gender gender, String specialty) {
 		super(id, name, age, gender);
-		this.specitality = specitality;
+		this.specialty = specialty;
 	}
 
 	@Override
@@ -17,6 +25,6 @@ public class Doctor extends Person{
 		System.out.println("Doctor Name: " + getName());
 		System.out.println("Doctor Age: " + getAge());
 		System.out.println("Doctor Gender: " + getGender());
-		System.out.println("Doctor Disease: " + specitality);
+		System.out.println("Doctor Disease: " + specialty);
 	}
 }
