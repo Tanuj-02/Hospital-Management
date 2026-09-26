@@ -85,4 +85,8 @@ public class AppointmentService {
 	public Appointment getAppointmentById(int id) {
 		return map.get(id);
 	}
+	
+	public List<Appointment> getPatientAppointments(int patientId) {
+	    return patientAppointments.getOrDefault(patientId, new ArrayList<>());
+	}
 }
