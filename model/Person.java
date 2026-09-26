@@ -1,6 +1,6 @@
-package hospitalManagement.model;
+package model;
 
-import hospitalManagement.enums.Gender;
+import enums.Gender;
 
 public abstract class Person {
 	private int id;
