@@ -1,11 +1,11 @@
-package hospitalManagement.services;
+package services;
 
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 
-import hospitalManagement.enums.Gender;
-import hospitalManagement.model.Doctor;
+import enums.Gender;
+import model.Doctor;
 
 public class DoctorService {
 	private HashMap<Integer, Doctor> doctors = new HashMap<>();
