@@ -4,6 +4,9 @@ import java.time.format.DateTimeParseException;
 import java.util.List;
 import java.util.Scanner;
 
+import model.Bill;
+import services.BillingService;
+import exceptions.PaymentException;
 import exceptions.HospitalException;
 import exceptions.InvalidAppointmentException;
 import enums.Gender;
@@ -22,7 +25,7 @@ public class Hospital {
     private static final DoctorService doctorService = new DoctorService();
     private static final PatientService patientService = new PatientService();
     private static final AppointmentService appointmentService = new AppointmentService();
-
+    private static final BillingService billingService = new BillingService();
     private static final DateTimeFormatter formatter =
             DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm");
 
@@ -35,7 +38,8 @@ public class Hospital {
             System.out.println("1. Book Appointment");
             System.out.println("2. Patient Management");
             System.out.println("3. Doctor Management");
-            System.out.println("4. Exit");
+            System.out.println("4. Billing Management");
+            System.out.println("5. Exit");
             System.out.print("Enter your choice: ");
 
             choice = readInt();
@@ -51,6 +55,9 @@ public class Hospital {
                     doctorMenu();
                     break;
                 case 4:
+                    billingMenu();
+                    break;
+                case 5:
                     System.out.println("Exiting Hospital Management System.");
                     break;
                 default:
@@ -58,7 +65,7 @@ public class Hospital {
                     break;
             }
 
-        } while (choice != 4);
+        } while (choice != 5);
     }
 
     private static void bookAppointment() {
@@ -98,7 +105,116 @@ public class Hospital {
 
         } while (choice != 5);
     }
+    private static void billingMenu() {
 
+    int choice;
+
+    do {
+        System.out.println("\n===== BILLING MANAGEMENT =====");
+        System.out.println("1. Generate Bill");
+        System.out.println("2. Pay Bill");
+        System.out.println("3. View All Bills");
+        System.out.println("4. View Patient Bills");
+        System.out.println("5. Back");
+        System.out.print("Enter your choice: ");
+
+        choice = readInt();
+
+        switch (choice) {
+
+            case 1:
+                generateBill();
+                break;
+
+            case 2:
+                payBill();
+                break;
+
+            case 3:
+                billingService.showAllBills();
+                break;
+            case 4:
+                showPatientBills();
+                break;
+            case 5:
+                break;
+
+            default:
+                System.out.println("Invalid choice.");
+                break;
+        }
+
+    } while (choice != 5);
+}
+    private static void showPatientBills() {
+
+    System.out.println("\n===== PATIENT BILLS =====");
+
+    System.out.print("Enter Patient ID: ");
+    int patientId = readInt();
+
+    billingService.showBillsByPatient(patientId);
+}
+    private static void generateBill() {
+
+    System.out.println("\n===== GENERATE BILL =====");
+
+    System.out.print("Enter Appointment ID: ");
+    int appointmentId = readInt();
+
+    Appointment appointment =
+            appointmentService.getAppointmentById(appointmentId);
+
+    if (appointment == null) {
+        System.out.println("Appointment not found.");
+        return;
+    }
+
+    if (appointment.getStatus() != Status.COMPLETED) {
+        System.out.println("Bill can only be generated for a completed appointment.");
+        return;
+    }
+
+    System.out.print("Enter consultation fee: ");
+    double fee = sc.nextDouble();
+    sc.nextLine();
+
+    int billId = (int) (System.currentTimeMillis() % 100000);
+
+    Bill bill = new Bill(
+            billId,
+            appointment.getPatient(),
+            appointment.getDoctor(),
+            fee
+    );
+
+    billingService.generateBill(bill);
+    bill.displayBill();
+}
+    private static void payBill() {
+
+    System.out.println("\n===== PAY BILL =====");
+
+    System.out.print("Enter Bill ID: ");
+    int billId = readInt();
+
+    Bill bill = billingService.getBillById(billId);
+
+    if (bill == null) {
+        System.out.println("Bill not found.");
+        return;
+    }
+
+    try {
+
+        billingService.payBill(bill);
+
+    } catch (PaymentException e) {
+
+        System.out.println(e.getMessage());
+
+    }
+}
     private static void createAppointment() {
 
         System.out.println("\n===== CREATE APPOINTMENT =====");
