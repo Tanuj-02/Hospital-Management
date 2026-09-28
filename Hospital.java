@@ -2,6 +2,7 @@ import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
 import java.util.List;
+import java.util.NoSuchElementException;
 import java.util.Scanner;
 
 import model.Bill;
@@ -31,41 +32,52 @@ public class Hospital {
 
     public static void main(String[] args) {
 
-        int choice;
+        try {
+            loadSampleData();
+        } catch (IllegalStateException e) {
+            System.out.println("Unable to load sample hospital data: " + e.getMessage());
+            return;
+        }
 
-        do {
-            System.out.println("\n===== HOSPITAL MANAGEMENT SYSTEM =====");
-            System.out.println("1. Book Appointment");
-            System.out.println("2. Patient Management");
-            System.out.println("3. Doctor Management");
-            System.out.println("4. Billing Management");
-            System.out.println("5. Exit");
-            System.out.print("Enter your choice: ");
+        try {
+            int choice;
 
-            choice = readInt();
+            do {
+                System.out.println("\n===== HOSPITAL MANAGEMENT SYSTEM =====");
+                System.out.println("1. Book Appointment");
+                System.out.println("2. Patient Management");
+                System.out.println("3. Doctor Management");
+                System.out.println("4. Billing Management");
+                System.out.println("5. Exit");
+                System.out.print("Enter your choice: ");
 
-            switch (choice) {
-                case 1:
-                    bookAppointment();
-                    break;
-                case 2:
-                    patientMenu();
-                    break;
-                case 3:
-                    doctorMenu();
-                    break;
-                case 4:
-                    billingMenu();
-                    break;
-                case 5:
-                    System.out.println("Exiting Hospital Management System.");
-                    break;
-                default:
-                    System.out.println("Invalid choice.");
-                    break;
-            }
+                choice = readInt();
 
-        } while (choice != 5);
+                switch (choice) {
+                    case 1:
+                        bookAppointment();
+                        break;
+                    case 2:
+                        patientMenu();
+                        break;
+                    case 3:
+                        doctorMenu();
+                        break;
+                    case 4:
+                        billingMenu();
+                        break;
+                    case 5:
+                        System.out.println("Exiting Hospital Management System.");
+                        break;
+                    default:
+                        System.out.println("Invalid choice.");
+                        break;
+                }
+
+            } while (choice != 5);
+        } catch (NoSuchElementException e) {
+            System.out.println("\nInput ended. Exiting Hospital Management System.");
+        }
     }
 
     private static void bookAppointment() {
@@ -176,8 +188,7 @@ public class Hospital {
     }
 
     System.out.print("Enter consultation fee: ");
-    double fee = sc.nextDouble();
-    sc.nextLine();
+    double fee = readDouble();
 
     int billId = (int) (System.currentTimeMillis() % 100000);
 
@@ -409,6 +420,58 @@ public class Hospital {
 
         } while (choice != 6);
     }
+
+    private static void loadSampleData() {
+        Patient[] patients = {
+                new Patient(201, "Aarav Mehta", 34, Gender.MALE, "Joint Pain"),
+                new Patient(202, "Priya Sharma", 28, Gender.FEMALE, "Acne"),
+                new Patient(203, "Kabir Verma", 52, Gender.MALE, "Heart"),
+                new Patient(204, "Ananya Singh", 41, Gender.FEMALE, "Migraine"),
+                new Patient(205, "Rohan Gupta", 47, Gender.MALE, "Inflamation")
+        };
+        double[] consultationFees = {800.0, 650.0, 1200.0, 900.0, 750.0};
+
+        try {
+            for (int i = 0; i < patients.length; i++) {
+                Patient patient = patients[i];
+                patientService.addPatient(patient);
+
+                LocalDateTime appointmentTime = LocalDateTime.now()
+                        .plusDays(i + 1)
+                        .withHour(9 + i)
+                        .withMinute(0)
+                        .withSecond(0)
+                        .withNano(0);
+                appointmentService.createAppointment(patient, appointmentTime);
+
+                Appointment appointment = appointmentService
+                        .getPatientAppointments(patient.getId()).get(0);
+                appointment.setTime(LocalDateTime.now()
+                    .minusDays(i + 1)
+                    .withHour(9 + i)
+                    .withMinute(0)
+                    .withSecond(0)
+                    .withNano(0));
+                appointmentService.updateStatus(appointment.getId(), Status.COMPLETED);
+
+                Bill bill = new Bill(
+                        5001 + i,
+                        patient,
+                        appointment.getDoctor(),
+                        consultationFees[i]
+                );
+                if (i == 0) {
+                    bill.makePayment();
+                }
+                billingService.generateBill(bill);
+            }
+        } catch (HospitalException e) {
+            throw new IllegalStateException("Unable to load sample hospital data.", e);
+        }
+
+        System.out.println("Sample data loaded: 5 patients, 5 appointments, and 5 bills.");
+    }
+
 
     private static void registerPatient() {
 
@@ -687,6 +750,22 @@ public class Hospital {
             } catch (NumberFormatException e) {
                 System.out.print("Please enter a valid whole number: ");
             }
+        }
+    }
+
+    private static double readDouble() {
+        while (true) {
+            String input = sc.nextLine().trim();
+            try {
+                double value = Double.parseDouble(input);
+                if (Double.isFinite(value) && value >= 0) {
+                    return value;
+                }
+            } catch (NumberFormatException e) {
+                System.out.print("Please enter a valid non-negative amount: ");
+                continue;
+            }
+            System.out.print("Please enter a valid non-negative amount: ");
         }
     }
 }
